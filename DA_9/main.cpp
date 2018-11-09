@@ -4,7 +4,7 @@
 #include <climits>
 #include <queue>
 
-const uint64_t INF = LLONG_MAX;
+const int64_t INF = LLONG_MAX;
 
 struct TEdge {
 	uint32_t to;
@@ -12,14 +12,14 @@ struct TEdge {
 };
 
 struct TGraph {
-	std::vector<int64_t> delta;
+	std::vector<int64_t> distances;
 	std::vector<std::vector<TEdge>> vertices;
 	uint32_t numOfVertices;
 	uint32_t numOfEdges;
 };
 
 void ReadGraph(TGraph&, int&, int&);
-void Dijkstra(TGraph&, int, std::vector<int64_t>);
+void Dijkstra(TGraph&, int, std::vector<int64_t>&);
 bool BellmanFord(TGraph&);
 void PrintGraph(TGraph&, int, int);
 
@@ -28,25 +28,25 @@ int main() {
 	int finish;
 	TGraph graph;
 	ReadGraph(graph, start, finish);
-	if (BellmanFord(graph) == false) {
+	if (BellmanFord(graph)) {
 		std::cout << "Negative cycle\n";
 		return 0;
 	}
-	for (int j = 0; j < graph.numOfVertices; ++j) {
-		for (int k = 0; k < graph.vertices[j].size(); ++k) {
-			graph.vertices[j][k].weight += graph.delta[j] - graph.delta[graph.vertices[j][k].to];
+	for (uint32_t j = 0; j < graph.numOfVertices; ++j) {
+		for (uint32_t k = 0; k < graph.vertices[j].size(); ++k) {
+			graph.vertices[j][k].weight += graph.distances[j] - graph.distances[graph.vertices[j][k].to];
 		}
 	}
 
-	std::vector<long long> lineOfResMatrix(graph.numOfVertices);
-	for (int j = 0; j < graph.numOfVertices; ++j) {
+	std::vector<int64_t> lineOfResMatrix(graph.numOfVertices);
+	for (uint32_t j = 0; j < graph.numOfVertices; ++j) {
 		Dijkstra(graph, j, lineOfResMatrix);
-		for (int k = 0; k < graph.numOfVertices - 1; k++) {
+		for (uint32_t k = 0; k < graph.numOfVertices - 1; ++k) {
 			if (lineOfResMatrix[k] == LLONG_MAX) {
 				std::cout << "inf ";
 			}
 			else {
-				std::cout << lineOfResMatrix[k] - (graph.delta[j] - graph.delta[k]) << " ";
+				std::cout << lineOfResMatrix[k] - (graph.distances[j] - graph.distances[k]) << " ";
 			}
 		}
 
@@ -55,68 +55,66 @@ int main() {
 		}
 		else {
 			std::cout << lineOfResMatrix[graph.numOfVertices - 1] -
-				(graph.delta[j] - graph.delta[graph.numOfVertices - 1]);
+				(graph.distances[j] - graph.distances[graph.numOfVertices - 1]);
 		}
 
 		std::cout << "\n";
 	}
-	system("pause");
 	return 0;
 }
 
-void Dijkstra(TGraph& graph, int start, std::vector<int64_t> dist) {
-	dist.resize(graph.numOfVertices);
-	TEdge temp;
-	// Using lambda to compare elements.
-	//auto cmp = [](int left, int right) { return (left ^ 1) < (right ^ 1); };
-	//std::priority_queue<int, std::vector<int>, decltype(cmp)> q3(cmp);
-	auto cmp = [](TEdge& e1, TEdge& e2) { return e1.weight > e2.weight; };
-	std::priority_queue<TEdge, std::vector<TEdge>, decltype(cmp)> prQueue(cmp);
+void Dijkstra(TGraph& graph, int start, std::vector<int64_t>& distances) {
+	// Using lambda to compare elements https://en.cppreference.com/w/cpp/container/priority_queue
+ 	auto comparing = [](TEdge& firstEdge, TEdge& secondEdge) { return firstEdge.weight > secondEdge.weight; };
+	std::priority_queue<TEdge, std::vector<TEdge>, decltype(comparing)> priorityQueue(comparing);
 
-	for (int i = 0; i < graph.numOfVertices; ++i) {
-		dist[i] = INF;
+	distances.resize(graph.numOfVertices);
+	for (uint32_t i = 0; i < graph.numOfVertices; ++i) {
+		distances[i] = INF;
 	}
-	dist[start] = 0;
-	temp.weight = 0;//77777
-	temp.to = start;
-	prQueue.push(temp);
 
-	while (!prQueue.empty()) {
-		int active = prQueue.top().to;
-		prQueue.pop();
+	distances[start] = 0;
+	TEdge currentEdge{start,0};
+	priorityQueue.push(currentEdge);
+
+	while (!priorityQueue.empty()) {
+		const uint32_t currentVertex = priorityQueue.top().to;
+		priorityQueue.pop();
+
 		std::vector<TEdge>::iterator i;
-		for (i = graph.vertices[active].begin(); i != graph.vertices[active].end(); ++i) {
-			int to = (*i).to;
-			int weight = (*i).weight;
+		for (i = graph.vertices[currentVertex].begin(); i != graph.vertices[currentVertex].end(); ++i) {
+			const uint32_t relaxationVertex = (*i).to;
+			const int32_t weight = (*i).weight;
 
-			if (dist[to] > dist[active] + weight) {
-				dist[to] = dist[active] + weight;
-				temp.to = to;
-				temp.weight = dist[to];
-				prQueue.push(temp);
+			if (distances[relaxationVertex] > distances[currentVertex] + weight) {
+				distances[relaxationVertex] = distances[currentVertex] + weight;
+				currentEdge.to = relaxationVertex;
+				currentEdge.weight = distances[relaxationVertex];
+				priorityQueue.push(currentEdge);
 			}
 		}
 	}
 }
 
 bool BellmanFord(TGraph& graph) {
-	graph.delta.resize(++graph.numOfVertices, INF);
-	graph.delta[graph.delta.size() - 1] = 0;
-	TEdge temp;
-	temp.weight = 0;
-	for (int i = 0; i < graph.numOfVertices; ++i) {
+	//add fictive vertex 
+	graph.distances.resize(++graph.numOfVertices, INF);
+	graph.distances[graph.distances.size() - 1] = 0;
+	TEdge temp{0,0};
+	for (uint32_t i = 0; i < graph.numOfVertices-1; ++i) {
 		temp.to = i;
 		graph.vertices[graph.numOfVertices-1].push_back(temp);
 	}
-	bool changed;
-	for (int k = 0; k < graph.numOfVertices; ++k) {
+
+	bool changed = false;
+	for (uint32_t k = 0; k < graph.numOfVertices; ++k) {
 		changed = false;
-		for (int i = 0; i < graph.vertices.size(); ++i) {
-			for (int j = 0; j < graph.vertices[i].size(); ++j) {
-				if (graph.delta[i] < INF) {
-					if (graph.delta[graph.vertices[i][j].to] >
-						graph.delta[i] + graph.vertices[i][j].weight) {
-						graph.delta[graph.vertices[i][j].to] = graph.delta[i] +
+		for (uint32_t i = 0; i < graph.vertices.size(); ++i) {
+			for (uint32_t j = 0; j < graph.vertices[i].size(); ++j) {
+				if (graph.distances[i] < INF) {
+					if (graph.distances[graph.vertices[i][j].to] >
+						graph.distances[i] + graph.vertices[i][j].weight) {
+						graph.distances[graph.vertices[i][j].to] = graph.distances[i] +
 							graph.vertices[i][j].weight;
 						changed = true;
 					}
@@ -127,11 +125,7 @@ bool BellmanFord(TGraph& graph) {
 	--graph.numOfVertices;
 	graph.vertices.pop_back();
 
-	if (changed == true) {
-		return false;
-	}
-
-	return true;
+	return changed;
 }
 
 void ReadGraph(TGraph& graph, int& start, int& finish) {
@@ -149,7 +143,7 @@ void ReadGraph(TGraph& graph, int& start, int& finish) {
 		--temp1.to;
 		--temp2.to;
 		graph.vertices[temp1.to].push_back(temp2);
-		graph.vertices[temp2.to].push_back(temp1);
+		//graph.vertices[temp2.to].push_back(temp1);
 	}
 }
 
