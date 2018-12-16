@@ -147,13 +147,3 @@ void ReadGraph(TGraph& graph, int& start, int& finish) {
 	}
 }
 
-void PrintGraph(TGraph& graph, int start, int finish) {
-	for (int i = 0; i < graph.numOfVertices; ++i) {
-		std::cout << "> Vertex " << i + 1 << std::endl;
-		for (int j = 0; j < graph.vertices[i].size(); ++j) {
-			std::cout << j + 1 << ") Vertex " << graph.vertices[i][j].to + 1 << std::endl;
-			std::cout << j + 1 << ") Weight " << graph.vertices[i][j].weight << std::endl;
-			std::cout << "===========" << std::endl;
-		}
-	}
-}
